@@ -44,42 +44,45 @@ This will start the server on the default port 3000 or on the port specified in 
 
 ### API Endpoints
 
-#### POST /processCID
+#### GET /api/get_digest_hash
 
-This endpoint requires a JSON body with the following properties:
+This endpoint requires the `cid` query parameter, which is the CID value that you want to process. The server will respond with a JSON object containing the list of hash digests extracted from the content.
 
-- `option`: The type of operation you want to perform. It can be one of these values: "digest", "list", or "checklink".
-- `inputCid`: The CID value that you want to process.
+#### GET /api/list_cids
 
-The server will respond with a JSON object containing the result of the operation. See the examples below for more details.
+This endpoint requires the `cid` query parameter, which is the CID value that you want to process. The server will respond with a JSON object containing the list of all CIDs extracted from the content.
+
+#### DELETE /api/remove_file
+
+This endpoint requires the `cid` query parameter, which is the CID value that you want to process. The server will check the link status of IPFS links associated with the provided CID and respond with a JSON object containing the lists of blocked, unsure, and legitimate links along with the total count for each category.
 
 ### Examples
 
 To send a request to the server, you can use tools such as curl, Postman, or any programming language with HTTP capabilities. Here are examples using curl:
 
-1. Digest Processing
+1. Get Digest Hash
 
 * Request:
 
     ```bash
-    curl -H "Content-Type: application/json" -H "Authorization: Bearer <YOUR_AUTH_KEY>" -X POST -d '{"option":"digest", "inputCid":"<CID_VALUE>"}' http://localhost:3000/processCID
+    curl -H "Authorization: Bearer <YOUR_AUTH_KEY>" http://localhost:3000/api/get_digest_hash?cid=<CID_VALUE>
     ```
-
-    * Expected Response:
+* Expected Response:
     ```bash
-        {
+    {
     "List of hash digest": [
         "CID 1: DIGEST BASE32 MULTIBASE: CIQNTKI4DVU3ZM2UN2IVUSQNIA5U2TAVZN2K4QF225IDOURIWRKTFMA",
         ...
     ]
     }
+
     ```
 
 2. List of CIDs
 * Request:
 
     ```bash
-    curl -H "Content-Type: application/json" -H "Authorization: Bearer <YOUR_AUTH_KEY>" -X POST -d '{"option":"list", "inputCid":"<CID_VALUE>"}' http://localhost:3000/processCID
+    curl -H "Content-Type: application/json" -H curl -H "Authorization: Bearer <YOUR_AUTH_KEY>" http://localhost:3000/api/list_cids?cid=<CID_VALUE>
     ```
 
 * Expected Response:
@@ -96,21 +99,37 @@ To send a request to the server, you can use tools such as curl, Postman, or any
 * Request:
 
     ```bash
-    curl -H "Content-Type: application/json" -H "Authorization: Bearer <YOUR_AUTH_KEY>" -X POST -d '{"option":"checklink", "inputCid":"<CID_VALUE>"}' http://localhost:3000/processCID
+    curl -H "Authorization: Bearer <YOUR_AUTH_KEY>" -X DELETE http://localhost:3000/api/remove_file?cid=<CID_VALUE>
     ```
 
 * Expected Response:
     ```bash
     {
-  "List of blocked IPFS links": [
-    "CID 1: DIGEST BASE32 MULTIBASE: CIQNTKI4DVU3ZM2UN2IVUSQNIA5U2TAVZN2K4QF225IDOURIWRKTFMA",
-    ...
-  ],
-  "totalBlocked": 1
+    "List of blocked IPFS links": [
+        "CID 1: DIGEST BASE32 MULTIBASE: CIQNTKI4DVU3ZM2UN2IVUSQNIA5U2TAVZN2K4QF225IDOURIWRKTFMA",
+        ...
+    ],
+    "Unsure IPFS links": [
+        ...
+    ],
+    "List of legitimate IPFS links": [
+        ...
+    ],
+    "totalBlocked": 1,
+    "totalUnsure": ...,
+    "totalLegit": ...
     }
+
     ```
 Replace <YOUR_AUTH_KEY> with the actual authorization key you set in your .env file, and <CID_VALUE> with the CID you want to process.
 
+## Verbose Mode
+The CID Processing System supports a `--verbose` flag that enables verbose mode when starting the API. To run the API in verbose mode and see detailed logs, use the following command:
+```bash
+node src/main.js --verbose
+```
+
+In verbose mode, the API will print additional debug information, such as the start of each controller function, the list of hashes extracted, and the processing status of each CID. This can be helpful for debugging and understanding the system's behavior.
 
 ## Custom Utils and IPFS Utils
 
