@@ -9,6 +9,9 @@ The CID Processing API is a web-based application that allows you to process and
 
 3. **Check IPFS Link Status:** The system checks the block status of IPFS links associated with a provided CID and displays the details of blocked links along with the total number of blocked links found.
 
+4. **Safe Browsing Check:** The system performs a Google Safe Browsing API check for each IPFS link before checking its status. If any link is found to be malicious or unsafe according to the Google Safe Browsing API, it will be reported separately in the API response.
+
+
 ## Prerequisites
 
 - Node.js installed on your machine.
@@ -27,10 +30,8 @@ The CID Processing API is a web-based application that allows you to process and
 ```makefile
 AUTH_KEY=your_auth_key
 PORT=your_port_number
+SAFE_BROWSING_API_KEY=your_google_API_key
 ```
-
-
-
 
 ## Usage
 
@@ -106,7 +107,7 @@ To send a request to the server, you can use tools such as curl, Postman, or any
     ```bash
     {
     "List of blocked IPFS links": [
-        "CID 1: DIGEST BASE32 MULTIBASE: CIQNTKI4DVU3ZM2UN2IVUSQNIA5U2TAVZN2K4QF225IDOURIWRKTFMA",
+        "CID 1: DIGEST BASE32 MULTIBASE:    CIQNTKI4DVU3ZM2UN2IVUSQNIA5U2TAVZN2K4QF225IDOURIWRKTFMA    ",
         ...
     ],
     "Unsure IPFS links": [
@@ -115,11 +116,13 @@ To send a request to the server, you can use tools such as curl, Postman, or any
     "List of legitimate IPFS links": [
         ...
     ],
-    "totalBlocked": 1,
-    "totalUnsure": ...,
-    "totalLegit": ...
+    "Google Safe Browsing Results": [
+        ...
+    ],
+    totalBlocked: 1,
+    totalUnsure: ...,
+    totalLegit: ...
     }
-
     ```
 Replace <YOUR_AUTH_KEY> with the actual authorization key you set in your .env file, and <CID_VALUE> with the CID you want to process.
 
