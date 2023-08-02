@@ -2,28 +2,25 @@ import { CID } from "multiformats/cid";
 import { bases } from "multiformats/basics";
 import { readFile } from "fs/promises";
 
-// Import codecs.json using fs/promises
 const codecs = JSON.parse(
   await readFile(new URL("./codecs.json", import.meta.url))
 );
 
-// Create a mapping of base prefixes to their corresponding base objects
 const basesByPrefix = Object.keys(bases).reduce((acc, curr) => {
   acc[bases[curr].prefix] = bases[curr];
   return acc;
 }, {});
 
-// Function to decode a CID value and extract its components
-export function decodeCID(value) {
-  // Extract the prefix from the CID value
+export function decodeCID(value, verboseMode) {
+  if (verboseMode) {
+    console.log(`Decoding CID: ${value}`);
+  }
+  
   const prefix = value.substr(0, 1);
-  // Get the base object using the prefix
   const base = basesByPrefix[prefix];
-  // Parse the CID value using the base object
   const cid = CID.parse(value, base);
 
-  return {
-    // Return the decoded CID and its components
+  const decodedCid = {
     cid,
     multibase: cid.version === 0 ? bases.base58btc : base,
     multicodec: codecs[cid.code],
@@ -32,30 +29,50 @@ export function decodeCID(value) {
       name: codecs[cid.multihash.code].name,
     },
   };
+
+  if (verboseMode) {
+    console.log(`Decoded CID:`, decodedCid);
+  }
+
+  return decodedCid;
 }
 
-// Function to process CIDv0 and return the CIDv1 version
-export function processCIDv0(inputCid) {
+export function processCIDv0(inputCid, verboseMode) {
+  if (verboseMode) {
+    console.log(`Processing CIDv0: ${inputCid}`);
+  }
+
   try {
-    // Decode the input CID
-    const data = decodeCID(inputCid);
-    // Convert CIDv0 to CIDv1
-    return data.cid.toV1().toString();
+    const data = decodeCID(inputCid, verboseMode);
+    const outputCid = data.cid.toV1().toString();
+
+    if (verboseMode) {
+      console.log(`Processed CIDv0 to CIDv1: ${outputCid}`);
+    }
+
+    return outputCid;
   } catch (err) {
+    console.error('Error processing CIDv0:', err);
     return { error: err.message || err };
   }
 }
 
-// Function to process CIDv1 and return the multihash bytes in the specified base encoding
-export function processCIDv1(inputCid) {
+export function processCIDv1(inputCid, verboseMode) {
+  if (verboseMode) {
+    console.log(`Processing CIDv1: ${inputCid}`);
+  }
+
   try {
-    // Decode the input CID
-    const data = decodeCID(inputCid);
-    // Encode the multihash bytes in the specified base encoding
-    return `DIGEST ${data.multibase.name} MULTIBASE: ${data.multibase.encode(
-      data.multihash.bytes
-    )}`;
+    const data = decodeCID(inputCid, verboseMode);
+    const encodedMultihash = `DIGEST ${data.multibase.name} MULTIBASE: ${data.multibase.encode(data.multihash.bytes)}`;
+
+    if (verboseMode) {
+      console.log(`Processed CIDv1 to encoded multihash: ${encodedMultihash}`);
+    }
+
+    return encodedMultihash;
   } catch (err) {
+    console.error('Error processing CIDv1:', err);
     return { error: err.message || err };
   }
 }
