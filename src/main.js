@@ -7,7 +7,7 @@ config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const verboseMode = process.argv.includes('--verbose');
+global.verboseMode = process.argv.includes('--verbose');
 
 if (verboseMode) {
   console.log('Running API in verbose mode...');

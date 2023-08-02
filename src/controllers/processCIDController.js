@@ -4,8 +4,8 @@ import { checkLinkStatusAndContent } from "../utils/linkCheckUtils.js";
 
 // Function to display the processed output of a CID
 function displayProcessedOutput(inputCid, index) {
-    const output0 = processCIDv0(inputCid);
-    const output1 = processCIDv1(output0);
+    const output0 = processCIDv0(inputCid, global.verboseMode);
+    const output1 = processCIDv1(output0, global.verboseMode);
     const upperCasedOutput = output1.toUpperCase();
     const indexOfRemoval = upperCasedOutput.indexOf(": ") + 2;
     const processedOutput =
@@ -24,14 +24,14 @@ function displayProcessedOutput(inputCid, index) {
     }
   
     try {
-      if (req.verboseMode) {
+      if (global.verboseMode) {
         console.log('getDigestHash - Start');
       }
   
       // Download file and extract hashes for the given CID
-      const hashList = await downloadFileAndExtractHashes(cid);
+      const hashList = await downloadFileAndExtractHashes(cid, global.verboseMode);
   
-      if (req.verboseMode) {
+      if (global.verboseMode) {
         console.log('getDigestHash - Hash List:', hashList);
       }
   
@@ -41,7 +41,7 @@ function displayProcessedOutput(inputCid, index) {
         outputList.push(displayProcessedOutput(cid, index + 2));
       });
   
-      if (req.verboseMode) {
+      if (global.verboseMode) {
         console.log('getDigestHash - Output List:', outputList);
       }
   
@@ -62,14 +62,14 @@ function displayProcessedOutput(inputCid, index) {
     }
   
     try {
-      if (req.verboseMode) {
+      if (global.verboseMode) {
         console.log('listCIDs - Start');
       }
   
       // Download file and extract hashes for the given CID
-      const hashList = await downloadFileAndExtractHashes(cid);
+      const hashList = await downloadFileAndExtractHashes(cid, global.verboseMode);
   
-      if (req.verboseMode) {
+      if (global.verboseMode) {
         console.log('listCIDs - Hash List:', hashList);
       }
   
@@ -79,7 +79,7 @@ function displayProcessedOutput(inputCid, index) {
         outputList.push(`CID ${index + 2}: ${cid}`);
       });
   
-      if (req.verboseMode) {
+      if (global.verboseMode) {
         console.log('listCIDs - Output List:', outputList);
       }
   
@@ -100,7 +100,7 @@ function displayProcessedOutput(inputCid, index) {
     }
   
     try {
-      if (req.verboseMode) {
+      if (global.verboseMode) {
         console.log('checkLink - Start');
       }
   
@@ -108,10 +108,10 @@ function displayProcessedOutput(inputCid, index) {
       const hashList = [cid];
   
       // Download file and extract hashes for all linked CIDs
-      const allHashList = await downloadFileAndExtractHashes(cid);
+      const allHashList = await downloadFileAndExtractHashes(cid, global.verboseMode);
       hashList.push(...allHashList);
   
-      if (req.verboseMode) {
+      if (global.verboseMode) {
         console.log('checkLink - All Hash List:', hashList);
       }
   
@@ -123,12 +123,12 @@ function displayProcessedOutput(inputCid, index) {
       for (let index = 0; index < hashList.length; index++) {
         const _cid = hashList[index];
   
-        if (req.verboseMode) {
+        if (global.verboseMode) {
           console.log('checkLink - Processing CID:', _cid);
         }
   
         // Check the link status and content for the current CID
-        const linkStatus = await checkLinkStatusAndContent(_cid, 5); // Replace 5 with the desired timeout in seconds
+        const linkStatus = await checkLinkStatusAndContent(_cid, 5, global.verboseMode); // Replace 5 with the desired timeout in seconds
   
         if (linkStatus === true) {
           blockedLinks.push(displayProcessedOutput(_cid, index + 1));
@@ -139,7 +139,7 @@ function displayProcessedOutput(inputCid, index) {
         }
       }
   
-      if (req.verboseMode) {
+      if (global.verboseMode) {
         console.log('checkLink - Blocked Links:', blockedLinks);
         console.log('checkLink - Unsure Links:', unsureLinks);
         console.log('checkLink - Legit Links:', legitLinks);
