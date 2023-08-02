@@ -1,7 +1,7 @@
 import { downloadFileAndExtractHashes } from "../utils/ipfsUtils.js";
 import { processCIDv0, processCIDv1 } from "../utils/customUtils.js";
 import { checkLinkStatusAndContent } from "../utils/linkCheckUtils.js";
-
+import { checkSafeBrowsing } from "../utils/googleSecureBrowsingAPI.js";
 // Function to display the processed output of a CID
 function displayProcessedOutput(inputCid, index) {
     const output0 = processCIDv0(inputCid, global.verboseMode);
@@ -92,71 +92,85 @@ function displayProcessedOutput(inputCid, index) {
   };
   
   // Controller function to check the link status of a CID
-  export const checkLink = async (req, res) => {
-    const { cid } = req.query;
-  
-    if (!cid) {
-      return res.status(400).json({ error: "CID value is missing. Please provide the CID value as a query parameter." });
+export const checkLink = async (req, res) => {
+  const { cid } = req.query;
+
+  if (!cid) {
+    return res.status(400).json({ error: "CID value is missing. Please provide the CID value as a query parameter." });
+  }
+
+  try {
+    if (global.verboseMode) {
+      console.log('checkLink - Start');
     }
-  
-    try {
-      if (global.verboseMode) {
-        console.log('checkLink - Start');
-      }
-  
-      // Initialize the list with the given CID
-      const hashList = [cid];
-  
-      // Download file and extract hashes for all linked CIDs
-      const allHashList = await downloadFileAndExtractHashes(cid, global.verboseMode);
-      hashList.push(...allHashList);
-  
-      if (global.verboseMode) {
-        console.log('checkLink - All Hash List:', hashList);
-      }
-  
-      // Lists to store blocked, unsure, and legitimate links
-      const blockedLinks = [];
-      const unsureLinks = [];
-      const legitLinks = [];
-  
-      for (let index = 0; index < hashList.length; index++) {
-        const _cid = hashList[index];
-  
-        if (global.verboseMode) {
-          console.log('checkLink - Processing CID:', _cid);
-        }
-  
-        // Check the link status and content for the current CID
-        const linkStatus = await checkLinkStatusAndContent(_cid, 5, global.verboseMode); // Replace 5 with the desired timeout in seconds
-  
-        if (linkStatus === true) {
-          blockedLinks.push(displayProcessedOutput(_cid, index + 1));
-        } else if (linkStatus === 'unsure') {
-          unsureLinks.push(_cid);
-        } else {
-          legitLinks.push(_cid);
-        }
-      }
-  
-      if (global.verboseMode) {
-        console.log('checkLink - Blocked Links:', blockedLinks);
-        console.log('checkLink - Unsure Links:', unsureLinks);
-        console.log('checkLink - Legit Links:', legitLinks);
-      }
-  
-      // Send the response with the lists of blocked, unsure, and legitimate links
-      return res.json({
-        "List of blocked IPFS links:": blockedLinks,
-        "Unsure IPFS links:": unsureLinks,
-        "List of legitimate IPFS links:": legitLinks,
-        totalBlocked: blockedLinks.length,
-        totalUnsure: unsureLinks.length,
-        totalLegit: legitLinks.length,
-      });
-    } catch (error) {
-      console.error('checkLink - Error:', error);
-      return res.status(500).json({ error: "Error while fetching the list of CIDs:", details: error });
+
+    // Initialize the list with the given CID
+    const hashList = [cid];
+
+    // Download file and extract hashes for all linked CIDs
+    const allHashList = await downloadFileAndExtractHashes(cid, global.verboseMode);
+    hashList.push(...allHashList);
+
+    if (global.verboseMode) {
+      console.log('checkLink - All Hash List:', hashList);
     }
-  };
-  
+
+    // Lists to store blocked, unsure, and legitimate links
+    const blockedLinks = [];
+    const unsureLinks = [];
+    const legitLinks = [];
+    const googleSafeBrowsingResults = [];
+
+    for (let index = 0; index < hashList.length; index++) {
+      const _cid = hashList[index];
+
+      if (global.verboseMode) {
+        console.log('checkLink - Processing CID:', _cid);
+      }
+
+      if (global.verboseMode) {
+        console.log(`checkLink - Checking Google Safe Browsing for CID ${index + 1}`);
+      }
+
+      // Check the Safe Browsing status for the current URL
+      const safeBrowsingResult = await checkSafeBrowsing(`https://ipfs.io/ipfs/${_cid}`);
+      if (safeBrowsingResult && safeBrowsingResult.matches && safeBrowsingResult.matches.length > 0) {
+        blockedLinks.push(displayProcessedOutput(_cid, index + 1));
+        googleSafeBrowsingResults.push({ cid: _cid, safeBrowsingResult });
+        continue; // Skip the rest of the checks for this URL
+      }
+
+      // Check the link status and content for the current CID
+      const linkStatus = await checkLinkStatusAndContent(_cid, 5, global.verboseMode); // Replace 5 with the desired timeout in seconds
+
+      if (linkStatus === true) {
+        blockedLinks.push(displayProcessedOutput(_cid, index + 1));
+      } else if (linkStatus === 'unsure') {
+        unsureLinks.push(_cid);
+      } else {
+        legitLinks.push(_cid);
+      }
+    }
+
+    if (global.verboseMode) {
+      console.log('checkLink - Blocked Links:', blockedLinks);
+      console.log('checkLink - Unsure Links:', unsureLinks);
+      console.log('checkLink - Legit Links:', legitLinks);
+      console.log('checkLink - Google Safe Browsing Results:', googleSafeBrowsingResults);
+    }
+
+    // Send the response with the lists of blocked, unsure, and legitimate links
+    return res.json({
+      "List of blocked IPFS links:": blockedLinks,
+      "Unsure IPFS links:": unsureLinks,
+      "List of legitimate IPFS links:": legitLinks,
+      "Google Safe Browsing Results:": googleSafeBrowsingResults,
+      totalBlocked: blockedLinks.length,
+      totalUnsure: unsureLinks.length,
+      totalLegit: legitLinks.length,
+    });
+  } catch (error) {
+    console.error('checkLink - Error:', error);
+    return res.status(500).json({ error: "Error while fetching the list of CIDs:", details: error });
+  }
+};
