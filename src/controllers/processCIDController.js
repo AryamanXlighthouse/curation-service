@@ -4,58 +4,19 @@ import { checkLinkStatusAndContent } from "../utils/linkCheckUtils.js";
 
 // Function to display the processed output of a CID
 function displayProcessedOutput(inputCid, index) {
-  const output0 = processCIDv0(inputCid);
-  const output1 = processCIDv1(output0);
-  const upperCasedOutput = output1.toUpperCase();
-  const indexOfRemoval = upperCasedOutput.indexOf(": ") + 2;
-  const processedOutput =
-    upperCasedOutput.slice(0, indexOfRemoval) +
-    upperCasedOutput.slice(indexOfRemoval + 1);
+    const output0 = processCIDv0(inputCid);
+    const output1 = processCIDv1(output0);
+    const upperCasedOutput = output1.toUpperCase();
+    const indexOfRemoval = upperCasedOutput.indexOf(": ") + 2;
+    const processedOutput =
+      upperCasedOutput.slice(0, indexOfRemoval) +
+      upperCasedOutput.slice(indexOfRemoval + 1);
+    
+    return `CID ${index}: ${processedOutput}`;
+  }
   
-  return `CID ${index}: ${processedOutput}`;
-}
-
-export const getDigestHash = async (req, res) => {
-  const { cid } = req.query;
-
-  if (!cid) {
-    return res.status(400).json({ error: "CID value is missing. Please provide the CID value as a query parameter." });
-  }
-
-  try {
-    const hashList = await downloadFileAndExtractHashes(cid);
-    const outputList = [displayProcessedOutput(cid, 1)];
-    hashList.forEach((cid, index) => {
-      outputList.push(displayProcessedOutput(cid, index + 2));
-    });
-
-    return res.json({ "List of hash digest:": outputList });
-  } catch (error) {
-    return res.status(500).json({ error: "Error while fetching the list of CIDs:", details: error });
-  }
-};
-
-export const listCIDs = async (req, res) => {
-  const { cid } = req.query;
-
-  if (!cid) {
-    return res.status(400).json({ error: "CID value is missing. Please provide the CID value as a query parameter." });
-  }
-
-  try {
-    const hashList = await downloadFileAndExtractHashes(cid);
-    const outputList = [`CID 1: ${cid}`];
-    hashList.forEach((cid, index) => {
-      outputList.push(`CID ${index + 2}: ${cid}`);
-    });
-
-    return res.json({ "List of hashes:": outputList });
-  } catch (error) {
-    return res.status(500).json({ error: "Error while fetching the list of CIDs:", details: error });
-  }
-};
-
-export const checkLink = async (req, res) => {
+  // Controller function to get the digest hash of a CID
+  export const getDigestHash = async (req, res) => {
     const { cid } = req.query;
   
     if (!cid) {
@@ -63,16 +24,110 @@ export const checkLink = async (req, res) => {
     }
   
     try {
+      if (req.verboseMode) {
+        console.log('getDigestHash - Start');
+      }
+  
+      // Download file and extract hashes for the given CID
+      const hashList = await downloadFileAndExtractHashes(cid);
+  
+      if (req.verboseMode) {
+        console.log('getDigestHash - Hash List:', hashList);
+      }
+  
+      // Process the hashes and generate the output list
+      const outputList = [displayProcessedOutput(cid, 1)];
+      hashList.forEach((cid, index) => {
+        outputList.push(displayProcessedOutput(cid, index + 2));
+      });
+  
+      if (req.verboseMode) {
+        console.log('getDigestHash - Output List:', outputList);
+      }
+  
+      // Send the response with the list of hash digest
+      return res.json({ "List of hash digest:": outputList });
+    } catch (error) {
+      console.error('getDigestHash - Error:', error);
+      return res.status(500).json({ error: "Error while fetching the list of CIDs:", details: error });
+    }
+  };
+  
+  // Controller function to list all CIDs in a file
+  export const listCIDs = async (req, res) => {
+    const { cid } = req.query;
+  
+    if (!cid) {
+      return res.status(400).json({ error: "CID value is missing. Please provide the CID value as a query parameter." });
+    }
+  
+    try {
+      if (req.verboseMode) {
+        console.log('listCIDs - Start');
+      }
+  
+      // Download file and extract hashes for the given CID
+      const hashList = await downloadFileAndExtractHashes(cid);
+  
+      if (req.verboseMode) {
+        console.log('listCIDs - Hash List:', hashList);
+      }
+  
+      // Generate the output list of all CIDs
+      const outputList = [`CID 1: ${cid}`];
+      hashList.forEach((cid, index) => {
+        outputList.push(`CID ${index + 2}: ${cid}`);
+      });
+  
+      if (req.verboseMode) {
+        console.log('listCIDs - Output List:', outputList);
+      }
+  
+      // Send the response with the list of hashes
+      return res.json({ "List of hashes:": outputList });
+    } catch (error) {
+      console.error('listCIDs - Error:', error);
+      return res.status(500).json({ error: "Error while fetching the list of CIDs:", details: error });
+    }
+  };
+  
+  // Controller function to check the link status of a CID
+  export const checkLink = async (req, res) => {
+    const { cid } = req.query;
+  
+    if (!cid) {
+      return res.status(400).json({ error: "CID value is missing. Please provide the CID value as a query parameter." });
+    }
+  
+    try {
+      if (req.verboseMode) {
+        console.log('checkLink - Start');
+      }
+  
+      // Initialize the list with the given CID
       const hashList = [cid];
+  
+      // Download file and extract hashes for all linked CIDs
       const allHashList = await downloadFileAndExtractHashes(cid);
       hashList.push(...allHashList);
   
+      if (req.verboseMode) {
+        console.log('checkLink - All Hash List:', hashList);
+      }
+  
+      // Lists to store blocked, unsure, and legitimate links
       const blockedLinks = [];
       const unsureLinks = [];
       const legitLinks = [];
   
       for (let index = 0; index < hashList.length; index++) {
         const _cid = hashList[index];
+  
+        if (req.verboseMode) {
+          console.log('checkLink - Processing CID:', _cid);
+        }
+  
+        // Check the link status and content for the current CID
         const linkStatus = await checkLinkStatusAndContent(_cid, 5); // Replace 5 with the desired timeout in seconds
   
         if (linkStatus === true) {
@@ -84,6 +139,13 @@ export const checkLink = async (req, res) => {
         }
       }
   
+      if (req.verboseMode) {
+        console.log('checkLink - Blocked Links:', blockedLinks);
+        console.log('checkLink - Unsure Links:', unsureLinks);
+        console.log('checkLink - Legit Links:', legitLinks);
+      }
+  
+      // Send the response with the lists of blocked, unsure, and legitimate links
       return res.json({
         "List of blocked IPFS links:": blockedLinks,
         "Unsure IPFS links:": unsureLinks,
@@ -93,9 +155,8 @@ export const checkLink = async (req, res) => {
         totalLegit: legitLinks.length,
       });
     } catch (error) {
+      console.error('checkLink - Error:', error);
       return res.status(500).json({ error: "Error while fetching the list of CIDs:", details: error });
     }
   };
-  
-  
   
