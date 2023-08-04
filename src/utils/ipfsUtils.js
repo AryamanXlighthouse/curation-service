@@ -34,7 +34,7 @@ export async function downloadFileAndExtractHashes(CID, verboseMode) {
 
     // Recursively fetch and merge all linked hashes
     const linkedHashLists = await Promise.all(linkedHashes.map(hash => downloadFileAndExtractHashes(hash, verboseMode, timeoutInMs)));
-    const hashList = [CID, ...linkedHashes, ...linkedHashLists.flat()];
+    const hashList = [...linkedHashes, ...linkedHashLists.flat()];
 
     return hashList;
   } catch (error) {
